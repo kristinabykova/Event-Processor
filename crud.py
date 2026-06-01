@@ -148,7 +148,7 @@ async def process_payment(
     # проверяем, есть ли уже такая покупка
     # если есть, то возвращаем ее же и ничего нового не создаем
 
-    existing_payment = await get_payment(data.clid, data.payment_ts, session)
+    existing_payment = await get_payment(data, session)
 
     if existing_payment is not None:
         return existing_payment
