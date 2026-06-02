@@ -20,7 +20,7 @@ async def get_payment(
     query = select(AdVantageOutbox).where(
         and_(
             AdVantageOutbox.clid == data.clid,
-            AdVantageOutbox.payment_ts == data.payment_ts,
+            AdVantageOutbox.payment_ts == data.ts,
         )
     )
     res = await session.execute(query)

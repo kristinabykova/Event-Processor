@@ -1,5 +1,5 @@
 from datetime import datetime
-from decimal import Decimal
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -10,12 +10,17 @@ class PaymentKey(BaseModel):
 
 
 class PaymentSchema(PaymentKey):
-    payout: Decimal
+    payout: float
     payout_currency: str
 
 
 class ClickSchema(BaseModel):
     clid: str
-    click_spend: Decimal
+    click_spend: float
     ts: datetime
     click_spend_currency: str
+
+
+class EventResponse(BaseModel):
+    status: str
+    msg: str
