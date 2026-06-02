@@ -19,15 +19,15 @@ async def receive_click(
         await session.commit()
 
         if result is None:
-            return {
-                "status": "ignored",
-                "msg": "Repeated click ignored",
-            }
+            return EventResponse(
+                status="ignored",
+                msg="Repeated click ignored",
+            )
 
-        return {
-            "status": "ok",
-            "msg": "Click processed",
-        }
+        return EventResponse(
+            status="ok",
+            msg="Click processed",
+        )
 
     except Exception as e:
         await session.rollback()
@@ -46,17 +46,23 @@ async def receive_payment(
         result = await process_payment(data, session)
         await session.commit()
 
-        return {
-            "status": "ok",
-            "msg": "Payment processed",
-        }
+        if result is None:
+            return EventResponse(
+                status="ignored",
+                msg="Repeated payment ignored",
+            )
+
+        return EventResponse(
+            status="ok",
+            msg="Payment processed",
+        )
 
     except IntegrityError:
         await session.rollback()
-        return {
-            "status": "ignored",
-            "msg": "Repeated payment ignored",
-        }
+        return EventResponse(
+            status="ignored",
+            msg="Repeated payment ignored",
+        )
 
     except Exception as e:
         await session.rollback()

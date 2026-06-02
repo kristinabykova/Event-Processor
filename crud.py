@@ -146,12 +146,12 @@ async def process_payment(
 ) -> AdVantageOutbox | None:
 
     # проверяем, есть ли уже такая покупка
-    # если есть, то возвращаем ее же и ничего нового не создаем
+    # если есть, то ничего не создаем и ничего не возвращаем
 
     existing_payment = await get_payment(data, session)
 
     if existing_payment is not None:
-        return existing_payment
+        return None
 
     # проверяем наличие клика с таким clid
     click_source_row = await get_click_source_row(data.clid, session)
