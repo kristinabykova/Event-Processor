@@ -3,7 +3,7 @@ import logging
 from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
-from outbox_puller import outbox_poller
+from outbox_poller import outbox_poller
 from routers.v1.event_processor import router
 
 from db.init_db import init_db
