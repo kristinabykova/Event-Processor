@@ -8,7 +8,9 @@ from crud import (
     mark_for_retry,
 )
 from db.session import async_session_maker
+from models.advantage_outbox import Status
 from services.advantage_client import send_to_advantage
+from services.email_alert import send_failed_alert
 
 CLEANUP_INTERVAL_SECONDS = 24 * 60 * 60
 POLL_INTERVAL_SECONDS = 1
@@ -33,6 +35,9 @@ async def process_ready_events() -> None:
 
             except Exception:
                 await mark_for_retry(row)
+
+            if row.status == Status.FAILED:
+                await send_failed_alert(row)
 
         await session.commit()
         return len(rows)

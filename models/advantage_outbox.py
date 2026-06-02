@@ -8,11 +8,11 @@ from db.base import Base, created_time, pk, optional_time, updated_time
 
 
 class Status(str, enum.Enum):
-    WAITING_CLICK = "waiting_click"
-    WAITING_PAYMENT = "waiting_payment"
-    READY_TO_SEND = "ready_to_send"
-    FAILED = "failed"
-    SENT = "sent"
+    WAITING_CLICK = "waiting_click"  # покупка ждет клика
+    WAITING_PAYMENT = "waiting_payment"  # клик ждет покупка
+    READY_TO_SEND = "ready_to_send"  # все данные пришли и запись готова к отправке
+    FAILED = "failed"  # после заданного количества ретраев запись так и не отправилась - передаем на ручную проверку
+    SENT = "sent"  # данные успешно отправлены
 
 
 class AdVantageOutbox(Base):

@@ -12,7 +12,7 @@ from schemas.advantage import (
 )
 
 # периодичность повторных отправок в сек
-RETRY_DELAYS = [0.01, 0.1, 1, 10, 100, 1000]
+RETRY_DELAYS = [1, 1, 1, 10, 100, 1000]
 
 
 # получение строки с покупкой по заданным clid и ts
@@ -236,13 +236,14 @@ async def mark_for_retry(
 ) -> AdVantageOutbox:
     now = datetime.now(timezone.utc)
 
-    row.count_retry += 1
     row.updated_at = now
 
-    if row.count_retry > len(RETRY_DELAYS):
+    if row.count_retry >= len(RETRY_DELAYS):
         row.status = Status.FAILED
         row.next_retry_at = None
         return row
+
+    row.count_retry += 1
 
     delay = RETRY_DELAYS[row.count_retry - 1]
     row.status = Status.READY_TO_SEND

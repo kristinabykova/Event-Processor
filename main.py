@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
@@ -27,6 +28,12 @@ app.include_router(router, prefix="/api/v1")
 @app.get("/")
 def root():
     return {"status": "ok"}
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
 
 
 if __name__ == "__main__":
