@@ -11,6 +11,8 @@ from schemas.advantage import (
     PaymentSchema,
 )
 
+from config import settings
+
 # периодичность повторных отправок в сек
 RETRY_DELAYS = [1, 1, 1, 10, 100, 1000]
 
@@ -74,7 +76,7 @@ async def create_payment_row(
         clid=data.clid,
         payout=data.payout,
         payment_ts=data.ts,
-        payout_currency=data.payout_currency,
+        payout_currency=settings.PAYOUT_CURRENCY,
         status=Status.WAITING_CLICK,
     )
     session.add(row)
@@ -90,7 +92,7 @@ async def create_click_row(
         clid=data.clid,
         click_spend=data.click_spend,
         click_ts=data.ts,
-        click_spend_currency=data.click_spend_currency,
+        click_spend_currency=settings.CLICK_SPEND_CURRENCY,
         status=Status.WAITING_PAYMENT,
     )
     session.add(row)
@@ -104,7 +106,7 @@ async def fill_payment_data(
 ) -> AdVantageOutbox:
     row.payout = data.payout
     row.payment_ts = data.ts
-    row.payout_currency = data.payout_currency
+    row.payout_currency = settings.PAYOUT_CURRENCY
     row.status = Status.READY_TO_SEND
     row.updated_at = datetime.now(timezone.utc)
     return row
@@ -117,7 +119,7 @@ async def fill_click_data(
 ) -> AdVantageOutbox:
     row.click_spend = data.click_spend
     row.click_ts = data.ts
-    row.click_spend_currency = data.click_spend_currency
+    row.click_spend_currency = settings.CLICK_SPEND_CURRENCY
     row.status = Status.READY_TO_SEND
     row.updated_at = datetime.now(timezone.utc)
     return row
@@ -133,10 +135,10 @@ async def create_ready_payment_row(
         clid=data.clid,
         payout=data.payout,
         payment_ts=data.ts,
-        payout_currency=data.payout_currency,
+        payout_currency=settings.PAYOUT_CURRENCY,
         click_spend=click_row.click_spend,
         click_ts=click_row.click_ts,
-        click_spend_currency=click_row.click_spend_currency,
+        click_spend_currency=settings.CLICK_SPEND_CURRENCY,
         status=Status.READY_TO_SEND,
     )
     session.add(row)
@@ -167,8 +169,7 @@ async def process_payment(
     if click_source_row.payment_ts is None:
         return await fill_payment_data(click_source_row, data)
 
-    # если клик не пустой, то есть пришла повторная покупка по clid,
-    # то мы берем данные о клике и покупке и создаем новую строчку
+    # если click данные уже есть в другой строке, создаём новую готовую запись для новой покупки
     return await create_ready_payment_row(data, click_source_row, session)
 
 

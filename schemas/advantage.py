@@ -11,14 +11,13 @@ class PaymentKey(BaseModel):
 
 class PaymentSchema(PaymentKey):
     payout: float
-    payout_currency: str
 
 
 class ClickSchema(BaseModel):
     clid: str
+    ad_id: int
     click_spend: float
     ts: datetime
-    click_spend_currency: str
 
 
 class EventResponse(BaseModel):

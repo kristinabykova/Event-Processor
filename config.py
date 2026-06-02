@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     DB_PASS: str
     DB_NAME: str
 
+    CLICK_SPEND_CURRENCY: str = "RUB"
+    PAYOUT_CURRENCY: str = "RUB"
+
     ADVANTAGE_URL: str
     ADVANTAGE_TOKEN: str
 
