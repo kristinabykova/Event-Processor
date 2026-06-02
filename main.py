@@ -1,6 +1,8 @@
+import asyncio
 from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
+from outbox_puller import outbox_poller
 from routers.v1.event_processor import router
 
 from db.init_db import init_db
@@ -9,7 +11,13 @@ from db.init_db import init_db
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    poller_task = asyncio.create_task(outbox_poller())
     yield
+    poller_task.cancel()
+    try:
+        await poller_task
+    except asyncio.CancelledError:
+        pass
 
 
 app = FastAPI(title="Event-Processor", lifespan=lifespan)

@@ -1,7 +1,7 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Sequence
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.advantage_outbox import AdVantageOutbox, Status
@@ -10,6 +10,9 @@ from schemas.advantage import (
     PaymentKey,
     PaymentSchema,
 )
+
+# периодичность повторных отправок в сек
+RETRY_DELAYS = [0.01, 0.1, 1, 10, 100, 1000]
 
 
 # получение строки с покупкой по заданным clid и ts
@@ -199,32 +202,76 @@ async def process_click(
     return [click_row]
 
 
+# ищем записи, которые готовы к отправке и у которых еще не было ретраев либо
+# для которых уже наступило время следующей попытки отправки
 async def get_ready_to_send(
     session: AsyncSession,
     limit: int = 100,
 ) -> Sequence[AdVantageOutbox]:
+    now = datetime.now(timezone.utc)
+
     query = (
         select(AdVantageOutbox)
-        .where(AdVantageOutbox.status.in_([Status.READY_TO_SEND, Status.FAILED]))
-        .order_by(AdVantageOutbox.created_at)
+        .where(
+            and_(
+                AdVantageOutbox.status == Status.READY_TO_SEND,
+                or_(
+                    AdVantageOutbox.next_retry_at.is_(None),
+                    AdVantageOutbox.next_retry_at <= now,
+                ),
+            )
+        )
+        .order_by(AdVantageOutbox.updated_at)
         .limit(limit)
     )
+
     res = await session.execute(query)
     return res.scalars().all()
 
 
+# обновляет запись после неудачной отправки, увеличивает счётчик попыток и либо
+# назначает время следующего ретрая, либо переводит событие в статус FAILED
+async def mark_for_retry(
+    row: AdVantageOutbox,
+) -> AdVantageOutbox:
+    now = datetime.now(timezone.utc)
+
+    row.count_retry += 1
+    row.updated_at = now
+
+    if row.count_retry > len(RETRY_DELAYS):
+        row.status = Status.FAILED
+        row.next_retry_at = None
+        return row
+
+    delay = RETRY_DELAYS[row.count_retry - 1]
+    row.status = Status.READY_TO_SEND
+    row.next_retry_at = now + timedelta(seconds=delay)
+
+    return row
+
+
+# помечает событие как отправленное
 async def mark_as_sent(
     row: AdVantageOutbox,
 ) -> AdVantageOutbox:
     row.status = Status.SENT
+    row.next_retry_at = None
     row.updated_at = datetime.now(timezone.utc)
     return row
 
 
-async def mark_as_failed(
-    row: AdVantageOutbox,
-) -> AdVantageOutbox:
-    row.status = Status.FAILED
-    row.count_retry += 1
-    row.updated_at = datetime.now(timezone.utc)
-    return row
+async def delete_sent_older_than_24h(
+    session: AsyncSession,
+) -> int:
+    border_time = datetime.now(timezone.utc) - timedelta(hours=24)
+
+    query = delete(AdVantageOutbox).where(
+        and_(
+            AdVantageOutbox.status == Status.SENT,
+            AdVantageOutbox.updated_at < border_time,
+        )
+    )
+
+    res = await session.execute(query)
+    return res.rowcount
